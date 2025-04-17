@@ -4,6 +4,12 @@
 
  Then when decrypted it doesnt save as Bo Shang (356A3B7D) – Secret.asc.aes256.decrypted it goes back to Bo Shang (356A3B7D) – Secret.asc
 
+The UI still needs another prompt, but leave blank to create new account, or enter bo@shang.software as the email, and try to break in! $100 crypto for any penetration that's logical, unlike https://boshang9.wordpress.com/blog/
+
+![image](https://github.com/user-attachments/assets/297b1917-b1e5-4b4e-b009-81c1c9277a49)
+
+![image](https://github.com/user-attachments/assets/b2ebf353-b874-4bf9-81d8-b1219d32b25e) - 
+
  However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
 
 ![image](https://github.com/user-attachments/assets/c8b925bd-68ab-4a09-a9bb-5b82eccd1fdc)
@@ -48,14 +54,37 @@ Mine is contained as UTF-8 in the exported file bo.asc.fingerprint B9F00EA93BF91
 ![image](https://github.com/user-attachments/assets/2b47d428-6abd-4825-b74e-54fb7f074b96)
 
 
+Ghidra 11.3.2 Latest
+What's New
+Change History
+Installation Guide
+SHA-256: 99d45035bdcc3d6627e7b1232b7b379905a9fad76c772c920602e2b5d8b2dac2
+
+![image](https://github.com/user-attachments/assets/f87f9286-7195-47dc-a1cd-2c7c69dcda58)
+
+CONGRATS these hash match!
+
+
+
+![image](https://github.com/user-attachments/assets/b037b119-af98-4956-bd6c-dfe34e3eca69)
+
+When set to MD5, WARNING no hash verification
+
+
+![image](https://github.com/user-attachments/assets/58562f55-58fe-40e2-9623-6fd4b9f1732f)
+
+
 2581CV00889 Shang, Bo vs. Massachusetts Institute of Technology et al
 
 ![image](https://github.com/user-attachments/assets/4ea3e57e-4051-426f-9e6e-f212c8b5b155)
 
-
+Civil Complaint - 
+2581CV00889 Shang, Bo vs. Massachusetts Institute of Technology et al
 [searchresults.page.pdf](https://github.com/user-attachments/files/19791252/searchresults.page.pdf)
 
 
+Civil Action Cover Sheet - 
+2581CV00889 Shang, Bo vs. Massachusetts Institute of Technology et al
 [searchresults.page.pdf](https://github.com/user-attachments/files/19791236/searchresults.page.pdf)[searchresults.page-2.pdf](https://github.com/user-attachments/files/19791240/searchresults.page-2.pdf)
 
 I'm going to wipe you, using $20 cash sown into my boxers
