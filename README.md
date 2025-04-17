@@ -4,6 +4,8 @@
 
  Then when decrypted it doesnt save as Bo Shang (356A3B7D) – Secret.asc.aes256.decrypted it goes back to Bo Shang (356A3B7D) – Secret.asc
 
+ However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
+
 ![image](https://github.com/user-attachments/assets/c8b925bd-68ab-4a09-a9bb-5b82eccd1fdc)
 
 ![image](https://github.com/user-attachments/assets/34cf1307-162c-4cea-9a6a-cc6c846a13b1)
