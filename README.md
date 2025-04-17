@@ -6,7 +6,9 @@
 
  However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
 
- ---- encryption, by PDFSage
+ ---- 
+ 
+ encryption (desktop version, linux, macos, or windows), by PDFSage
  
 ![image](https://github.com/user-attachments/assets/e0b8bf32-4aba-4ce8-a2ed-2de63ce0dcec)
 
