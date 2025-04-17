@@ -38,3 +38,8 @@ Your PGP public key fingerprint is: hz@mit.edu (PGP Public Key, fingerprint 3FF5
 
 ![image](https://github.com/user-attachments/assets/eb21f014-bcfd-44c0-90b5-ed46ecbb3834)
 
+2581CV00889 Shang, Bo vs. Massachusetts Institute of Technology et al
+
+![image](https://github.com/user-attachments/assets/4ea3e57e-4051-426f-9e6e-f212c8b5b155)
+
+
