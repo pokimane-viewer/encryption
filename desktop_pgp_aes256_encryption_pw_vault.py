@@ -4,16 +4,18 @@ import json
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext, simpledialog as sd
 import keyring
-from pgpy import PGPKey, PGPMessage, PGPUID
-from pgpy.constants import PubKeyAlgorithm, KeyFlags, HashAlgorithm, SymmetricKeyAlgorithm
+from pgpy import PGPKey, PGPMessage
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.fernet import Fernet
+import hashlib
 
 salt = b'my_app_master_salt'
 aes_secret_key = None
+master_password = None
+fernet = None
 
 def derive_master_key(pw):
     kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000)
@@ -44,6 +46,19 @@ def aes_decrypt(pw, token):
     data = unpadder.update(padded) + unpadder.finalize()
     return data.decode()
 
+def store_master_hash(pw):
+    keyring.set_password("pgp_app", "master_pw_hash", hashlib.sha256(pw.encode()).hexdigest())
+
+def verify_master_password(pw):
+    global fernet
+    stored = keyring.get_password("pgp_app", "master_pw_hash")
+    if not stored:
+        return False
+    if hashlib.sha256(pw.encode()).hexdigest() != stored:
+        return False
+    fernet = Fernet(derive_master_key(pw))
+    return True
+
 def setup_master_password():
     pw = sd.askstring("Set Master Password", "Set a master password:", show="*")
     if not pw:
@@ -51,25 +66,7 @@ def setup_master_password():
     global fernet, master_password
     fernet = Fernet(derive_master_key(pw))
     master_password = pw
-    key = PGPKey.new(PubKeyAlgorithm.RSAEncryptOrSign, 2048)
-    uid = PGPUID.new("Master Verification")
-    key.add_uid(uid, usage={KeyFlags.Sign}, hashes=[HashAlgorithm.SHA256],
-                ciphers=[SymmetricKeyAlgorithm.AES256], compression=None)
-    key.protect(pw, SymmetricKeyAlgorithm.AES256, HashAlgorithm.SHA256)
-    keyring.set_password("pgp_app", "master_verify_pubkey", str(key.pubkey))
-    keyring.set_password("pgp_app", "master_verify_privkey", str(key))
-
-def verify_master_password(pw):
-    global fernet
-    try:
-        fernet = Fernet(derive_master_key(pw))
-        priv = keyring.get_password("pgp_app", "master_verify_privkey")
-        key, _ = PGPKey.from_blob(priv)
-        with key.unlock(pw):
-            pass
-        return True
-    except:
-        return False
+    store_master_hash(pw)
 
 def change_master_password():
     global fernet, master_password
@@ -84,11 +81,6 @@ def change_master_password():
     if new != confirm:
         messagebox.showerror("Error", "Passwords do not match")
         return
-    priv = keyring.get_password("pgp_app", "master_verify_privkey")
-    key, _ = PGPKey.from_blob(priv)
-    with key.unlock(cur):
-        key.protect(new, SymmetricKeyAlgorithm.AES256, HashAlgorithm.SHA256)
-    keyring.set_password("pgp_app", "master_verify_privkey", str(key))
     old = fernet
     new_fernet = Fernet(derive_master_key(new))
     for kt in ("private_key", "sign_private_key", "credentials"):
@@ -97,6 +89,7 @@ def change_master_password():
             dec = old.decrypt(data.encode())
             keyring.set_password("pgp_app", kt, new_fernet.encrypt(dec).decode())
     fernet = new_fernet
+    store_master_hash(new)
     master_password = new
     messagebox.showinfo("Success", "Master password changed")
 
@@ -200,8 +193,7 @@ def verify_action():
     try:
         valid, orig = verify_signature(pub, sm_blob)
     except TypeError:
-        path = filedialog.askopenfilename(title="Select original message file",
-            filetypes=[("Text Files","*.txt"),("All Files","*.*")])
+        path = filedialog.askopenfilename(title="Select original message file", filetypes=[("Text Files","*.txt"),("All Files","*.*")])
         if not path:
             return
         with open(path, "r") as f:
@@ -231,8 +223,7 @@ def export_public_key(kt):
     if not txt:
         messagebox.showerror("Error", "No key stored")
         return
-    path = filedialog.asksaveasfilename(defaultextension=".asc",
-        filetypes=[("PGP Public Key","*.asc"),("All Files","*.*")])
+    path = filedialog.asksaveasfilename(defaultextension=".asc", filetypes=[("PGP Public Key","*.asc"),("All Files","*.*")])
     if path:
         with open(path, "w") as f:
             f.write(txt)
@@ -247,8 +238,7 @@ def export_private_key(kt):
     if not txt:
         messagebox.showerror("Error", "No key stored")
         return
-    path = filedialog.asksaveasfilename(defaultextension=".asc",
-        filetypes=[("PGP Private Key","*.asc"),("All Files","*.*")])
+    path = filedialog.asksaveasfilename(defaultextension=".asc", filetypes=[("PGP Private Key","*.asc"),("All Files","*.*")])
     if path:
         with open(path, "w") as f:
             f.write(txt)
@@ -259,8 +249,7 @@ def save_encrypted_action():
     if not ct:
         messagebox.showerror("Error","No ciphertext")
         return
-    path = filedialog.asksaveasfilename(defaultextension=".pgp",
-        filetypes=[("PGP Files","*.pgp"),("All Files","*.*")])
+    path = filedialog.asksaveasfilename(defaultextension=".pgp", filetypes=[("PGP Files","*.pgp"),("All Files","*.*")])
     if path:
         with open(path, "w") as f:
             f.write(ct)
@@ -271,8 +260,7 @@ def save_decrypted_action():
     if not pt.strip():
         messagebox.showerror("Error","No decrypted text")
         return
-    path = filedialog.asksaveasfilename(defaultextension=".txt",
-        filetypes=[("Text Files","*.txt"),("All Files","*.*")])
+    path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files","*.txt"),("All Files","*.*")])
     if path:
         with open(path, "w") as f:
             f.write(pt)
@@ -300,6 +288,44 @@ def aes_decrypt_action():
     pt = aes_decrypt(pw, token)
     aes_decrypted_text.delete("1.0", tk.END)
     aes_decrypted_text.insert(tk.END, pt)
+
+def aes_encrypt_file_action():
+    pw = aes_secret_key if aes_secret_key else master_password
+    path = filedialog.askopenfilename(title="Select file to encrypt")
+    if not path:
+        return
+    with open(path, "rb") as f:
+        data = f.read()
+    key = derive_aes_key(pw)
+    iv = os.urandom(16)
+    padder = padding.PKCS7(128).padder()
+    padded = padder.update(data) + padder.finalize()
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+    ct = encryptor.update(padded) + encryptor.finalize()
+    out_path = path + ".aes256"
+    with open(out_path, "wb") as f:
+        f.write(iv + ct)
+    messagebox.showinfo("Encrypted", f"File encrypted to {out_path}")
+
+def aes_decrypt_file_action():
+    pw = aes_secret_key if aes_secret_key else master_password
+    path = filedialog.askopenfilename(title="Select .aes256 file to decrypt", filetypes=[("AES256 Files","*.aes256"),("All Files","*.*")])
+    if not path:
+        return
+    with open(path, "rb") as f:
+        raw = f.read()
+    iv, ct = raw[:16], raw[16:]
+    key = derive_aes_key(pw)
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+    padded = decryptor.update(ct) + decryptor.finalize()
+    unpadder = padding.PKCS7(128).unpadder()
+    data = unpadder.update(padded) + unpadder.finalize()
+    out_path = path[:-7] if path.endswith(".aes256") else path + ".dec"
+    with open(out_path, "wb") as f:
+        f.write(data)
+    messagebox.showinfo("Decrypted", f"File decrypted to {out_path}")
 
 def add_cred():
     site = sd.askstring("Site", "Enter site:")
@@ -362,7 +388,7 @@ def copy_selected(field):
     root.clipboard_clear()
     root.clipboard_append(val)
 
-if not keyring.get_password("pgp_app", "master_verify_pubkey"):
+if not keyring.get_password("pgp_app", "master_pw_hash"):
     setup_master_password()
 else:
     while True:
@@ -386,7 +412,6 @@ keys_menu.add_command(label="Save Signing Private Key", command=lambda: store_ke
 keys_menu.add_command(label="Save Verify Public Key", command=lambda: store_key("verify_public_key", public_verify_key_text.get("1.0", tk.END).strip()) or messagebox.showinfo("Saved","Verify public key stored"))
 menubar.add_cascade(label="Keys", menu=keys_menu)
 root.config(menu=menubar)
-
 nb = ttk.Notebook(root)
 encrypt_frame = ttk.Frame(nb)
 decrypt_frame = ttk.Frame(nb)
@@ -399,8 +424,6 @@ nb.add(sign_frame, text="Sign")
 nb.add(verify_frame, text="Verify")
 nb.add(aes_frame, text="AES256")
 nb.pack(expand=1, fill="both")
-
-# Encrypt tab
 pub_frame = ttk.LabelFrame(encrypt_frame, text="Public Key")
 pub_frame.pack(fill="x", padx=5, pady=5)
 public_key_text = scrolledtext.ScrolledText(pub_frame, height=10)
@@ -421,8 +444,6 @@ ciphertext_text = scrolledtext.ScrolledText(ct_frame, height=10)
 ciphertext_text.pack(fill="both", expand=True, padx=5,pady=5)
 ttk.Button(encrypt_frame, text="Copy Encrypted", command=lambda: copy_to_clipboard(ciphertext_text)).pack(padx=5,pady=5)
 ttk.Button(encrypt_frame, text="Save Encrypted", command=save_encrypted_action).pack(padx=5,pady=5)
-
-# Decrypt tab
 priv_frame = ttk.LabelFrame(decrypt_frame, text="Private Key")
 priv_frame.pack(fill="x", padx=5,pady=5)
 private_key_text = scrolledtext.ScrolledText(priv_frame, height=10)
@@ -447,8 +468,6 @@ decrypted_text = scrolledtext.ScrolledText(dec_out_frame, height=10)
 decrypted_text.pack(fill="both", expand=True, padx=5,pady=5)
 ttk.Button(decrypt_frame, text="Copy Decrypted", command=lambda: copy_to_clipboard(decrypted_text)).pack(padx=5,pady=5)
 ttk.Button(decrypt_frame, text="Save Decrypted", command=save_decrypted_action).pack(padx=5,pady=5)
-
-# Sign tab
 spriv_frame = ttk.LabelFrame(sign_frame, text="Private Key")
 spriv_frame.pack(fill="x", padx=5,pady=5)
 private_sign_key_text = scrolledtext.ScrolledText(spriv_frame, height=10)
@@ -473,8 +492,6 @@ sout_frame.pack(fill="both", expand=True, padx=5,pady=5)
 signature_text = scrolledtext.ScrolledText(sout_frame, height=10)
 signature_text.pack(fill="both", expand=True, padx=5,pady=5)
 ttk.Button(sign_frame, text="Copy Signature", command=lambda: copy_to_clipboard(signature_text)).pack(padx=5,pady=5)
-
-# Verify tab
 vpub_frame = ttk.LabelFrame(verify_frame, text="Public Key")
 vpub_frame.pack(fill="x", padx=5,pady=5)
 public_verify_key_text = scrolledtext.ScrolledText(vpub_frame, height=10)
@@ -493,8 +510,6 @@ vout_frame = ttk.LabelFrame(verify_frame, text="Original Message")
 vout_frame.pack(fill="both", expand=True, padx=5,pady=5)
 verify_output_text = scrolledtext.ScrolledText(vout_frame, height=10)
 verify_output_text.pack(fill="both", expand=True, padx=5,pady=5)
-
-# AES tab
 pas_frame = ttk.LabelFrame(aes_frame, text="AES Mode")
 pas_frame.pack(fill="x", padx=5,pady=5)
 aes_mode_label = ttk.Label(pas_frame, text="AES mode: Master Password")
@@ -510,12 +525,12 @@ cipher_frame.pack(fill="both", expand=True, padx=5,pady=5)
 aes_ciphertext_text = scrolledtext.ScrolledText(cipher_frame, height=10)
 aes_ciphertext_text.pack(fill="both", expand=True, padx=5,pady=5)
 ttk.Button(aes_frame, text="Decrypt", command=aes_decrypt_action).pack(side="left", padx=5, pady=5)
+ttk.Button(aes_frame, text="Encrypt File", command=aes_encrypt_file_action).pack(side="left", padx=5, pady=5)
+ttk.Button(aes_frame, text="Decrypt File", command=aes_decrypt_file_action).pack(side="left", padx=5, pady=5)
 dec_frame = ttk.LabelFrame(aes_frame, text="Decrypted")
 dec_frame.pack(fill="both", expand=True, padx=5,pady=5)
 aes_decrypted_text = scrolledtext.ScrolledText(dec_frame, height=10)
 aes_decrypted_text.pack(fill="both", expand=True, padx=5,pady=5)
-
-# Credentials tab
 cred_frame = ttk.Frame(nb)
 nb.add(cred_frame, text="Credentials")
 columns = ("site","username","password")
@@ -539,4 +554,19 @@ def refresh_credentials_view():
         tree.insert("", "end", iid=site, values=(site, info["username"], "******"))
 
 refresh_credentials_view()
-root.mainloop()
+
+def on_close():
+    global master_password, fernet, aes_secret_key
+    master_password = None
+    fernet = None
+    aes_secret_key = None
+    root.destroy()
+
+root.protocol("WM_DELETE_WINDOW", on_close)
+
+try:
+    root.mainloop()
+finally:
+    master_password = None
+    fernet = None
+    aes_secret_key = None
