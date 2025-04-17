@@ -4,7 +4,8 @@ import json
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext, simpledialog as sd
 import keyring
-from pgpy import PGPKey, PGPMessage
+from pgpy import PGPKey, PGPMessage, PGPUID
+from pgpy.constants import PubKeyAlgorithm, KeyFlags, HashAlgorithm, SymmetricKeyAlgorithm, CompressionAlgorithm
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -84,7 +85,7 @@ def change_master_password():
         return
     old = fernet
     new_fernet = Fernet(derive_master_key(new))
-    for kt in ("private_key", "sign_private_key", "credentials"):
+    for kt in ("private_key", "sign_private_key", "credentials", "pgp_keyvault"):
         data = keyring.get_password("pgp_app", kt)
         if data:
             dec = old.decrypt(data.encode())
@@ -120,7 +121,7 @@ def verify_signature(pub, sm):
     return bool(pub.verify(m)), m.message or ""
 
 def store_key(kt, txt):
-    if kt in ("private_key", "sign_private_key", "credentials"):
+    if kt in ("private_key", "sign_private_key", "credentials", "pgp_keyvault"):
         enc = fernet.encrypt(txt.encode()).decode()
         keyring.set_password("pgp_app", kt, enc)
     else:
@@ -130,7 +131,7 @@ def get_stored_key(kt):
     d = keyring.get_password("pgp_app", kt)
     if not d:
         return None
-    if kt in ("private_key", "sign_private_key", "credentials"):
+    if kt in ("private_key", "sign_private_key", "credentials", "pgp_keyvault"):
         try:
             return fernet.decrypt(d.encode()).decode()
         except:
@@ -150,6 +151,108 @@ def load_credentials():
 def save_credentials(creds):
     enc = fernet.encrypt(json.dumps(creds).encode()).decode()
     keyring.set_password("pgp_app", "credentials", enc)
+
+def load_keyvault():
+    data = keyring.get_password("pgp_app", "pgp_keyvault")
+    if not data:
+        return {}
+    try:
+        dec = fernet.decrypt(data.encode()).decode()
+        return json.loads(dec)
+    except:
+        return {}
+
+def save_keyvault(vault):
+    enc = fernet.encrypt(json.dumps(vault).encode()).decode()
+    keyring.set_password("pgp_app", "pgp_keyvault", enc)
+
+def generate_keypair(name, email, passphrase):
+    key = PGPKey.new(PubKeyAlgorithm.RSAEncryptOrSign, 2048)
+    uid = PGPUID.new(name, email=email)
+    key.add_uid(uid, usage={KeyFlags.Sign, KeyFlags.EncryptCommunications, KeyFlags.EncryptStorage}, hashes=[HashAlgorithm.SHA256], ciphers=[SymmetricKeyAlgorithm.AES256], compression=[CompressionAlgorithm.ZLIB])
+    if passphrase:
+        key.protect(passphrase, SymmetricKeyAlgorithm.AES256, HashAlgorithm.SHA256)
+    return str(key), str(key.pubkey), key.fingerprint
+
+def generate_key_action():
+    name = sd.askstring("Name", "Enter name:")
+    if not name:
+        return
+    email = sd.askstring("Email", "Enter email:")
+    if email is None:
+        return
+    pp = sd.askstring("Passphrase", "Set passphrase (optional):", show="*")
+    def worker():
+        priv_txt, pub_txt, fp = generate_keypair(name, email, pp or None)
+        vault = load_keyvault()
+        vault[fp] = {"private": priv_txt, "public": pub_txt}
+        save_keyvault(vault)
+        messagebox.showinfo("Generated", f"Keypair generated with fingerprint {fp} and stored in vault")
+    threading.Thread(target=worker, daemon=True).start()
+
+def open_vault_window():
+    win = tk.Toplevel(root)
+    win.title("PGP Key Vault")
+    treev = ttk.Treeview(win, columns=("fingerprint",), show="headings")
+    treev.heading("fingerprint", text="Fingerprint")
+    treev.pack(fill="both", expand=True, padx=5, pady=5)
+    def refresh():
+        treev.delete(*treev.get_children())
+        for fp in load_keyvault().keys():
+            treev.insert("", "end", iid=fp, values=(fp,))
+    def import_key():
+        p = filedialog.askopenfilename(filetypes=[("PGP Key", "*.asc *.pgp"), ("All files", "*.*")])
+        if not p:
+            return
+        with open(p, "r") as f:
+            txt = f.read()
+        try:
+            k, _ = PGPKey.from_blob(txt)
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+            return
+        fp = k.fingerprint
+        vault = load_keyvault()
+        entry = vault.get(fp, {})
+        if k.is_public:
+            entry["public"] = txt
+        else:
+            entry["private"] = txt
+            if "public" not in entry:
+                entry["public"] = str(k.pubkey)
+        vault[fp] = entry
+        save_keyvault(vault)
+        refresh()
+    def delete_key():
+        sel = treev.selection()
+        if not sel:
+            return
+        fp = sel[0]
+        vault = load_keyvault()
+        vault.pop(fp, None)
+        save_keyvault(vault)
+        refresh()
+    def export_selected():
+        sel = treev.selection()
+        if not sel:
+            return
+        fp = sel[0]
+        data = load_keyvault().get(fp, {})
+        for typ in ("public", "private"):
+            if typ in data:
+                path = filedialog.asksaveasfilename(defaultextension=".asc", filetypes=[("PGP Key", "*.asc")], title=f"Save {typ} key")
+                if not path:
+                    continue
+                with open(path, "w") as f:
+                    f.write(data[typ])
+                with open(path + ".fingerprint", "w") as f:
+                    f.write(fp)
+    btn_frame = ttk.Frame(win)
+    btn_frame.pack(fill="x", padx=5, pady=5)
+    ttk.Button(btn_frame, text="Import Key", command=import_key).pack(side="left", padx=5, pady=5)
+    ttk.Button(btn_frame, text="Delete Key", command=delete_key).pack(side="left", padx=5, pady=5)
+    ttk.Button(btn_frame, text="Export Selected", command=export_selected).pack(side="left", padx=5, pady=5)
+    refresh()
 
 def encrypt_action():
     key = load_public_key_from_text(public_key_text.get("1.0", tk.END).strip())
@@ -244,10 +347,17 @@ def export_public_key(kt):
     if not txt:
         messagebox.showerror("Error", "No key stored")
         return
+    try:
+        k, _ = PGPKey.from_blob(txt)
+        fp = k.fingerprint
+    except:
+        fp = ""
     path = filedialog.asksaveasfilename(defaultextension=".asc", filetypes=[("PGP Public Key","*.asc"),("All Files","*.*")])
     if path:
         with open(path, "w") as f:
             f.write(txt)
+        with open(path + ".fingerprint", "w") as f:
+            f.write(fp)
         messagebox.showinfo("Export", f"Public key saved to {path}")
 
 def export_private_key(kt):
@@ -259,10 +369,17 @@ def export_private_key(kt):
     if not txt:
         messagebox.showerror("Error", "No key stored")
         return
+    try:
+        k, _ = PGPKey.from_blob(txt)
+        fp = k.fingerprint
+    except:
+        fp = ""
     path = filedialog.asksaveasfilename(defaultextension=".asc", filetypes=[("PGP Private Key","*.asc"),("All Files","*.*")])
     if path:
         with open(path, "w") as f:
             f.write(txt)
+        with open(path + ".fingerprint", "w") as f:
+            f.write(fp)
         messagebox.showinfo("Export", f"Private key saved to {path}")
 
 def save_encrypted_action():
@@ -439,6 +556,9 @@ keys_menu.add_command(label="Save Encryption Public Key", command=lambda: store_
 keys_menu.add_command(label="Save Encryption Private Key", command=lambda: store_key("private_key", private_key_text.get("1.0", tk.END).strip()) or messagebox.showinfo("Saved", "Private key stored"))
 keys_menu.add_command(label="Save Signing Private Key", command=lambda: store_key("sign_private_key", private_sign_key_text.get("1.0", tk.END).strip()) or messagebox.showinfo("Saved", "Signing key stored"))
 keys_menu.add_command(label="Save Verify Public Key", command=lambda: store_key("verify_public_key", public_verify_key_text.get("1.0", tk.END).strip()) or messagebox.showinfo("Saved", "Verify public key stored"))
+keys_menu.add_separator()
+keys_menu.add_command(label="Generate Keypair", command=generate_key_action)
+keys_menu.add_command(label="Open Key Vault", command=open_vault_window)
 menubar.add_cascade(label="Keys", menu=keys_menu)
 root.config(menu=menubar)
 nb = ttk.Notebook(root)
