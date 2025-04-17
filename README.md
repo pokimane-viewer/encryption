@@ -55,8 +55,24 @@ Mine is contained as UTF-8 in the exported file bo.asc.fingerprint B9F00EA93BF91
 
 [searchresults.page.pdf](https://github.com/user-attachments/files/19791252/searchresults.page.pdf)
 
+Ghidra 11.3.2 Latest
+What's New
+Change History
+Installation Guide
+SHA-256: 99d45035bdcc3d6627e7b1232b7b379905a9fad76c772c920602e2b5d8b2dac2
+
+![image](https://github.com/user-attachments/assets/f87f9286-7195-47dc-a1cd-2c7c69dcda58)
+
+CONGRATS these hash match!
 
 [searchresults.page.pdf](https://github.com/user-attachments/files/19791236/searchresults.page.pdf)[searchresults.page-2.pdf](https://github.com/user-attachments/files/19791240/searchresults.page-2.pdf)
+
+When set to MD5, WARNING no hash verification
+
+![image](https://github.com/user-attachments/assets/58562f55-58fe-40e2-9623-6fd4b9f1732f)
+
+
+![image](https://github.com/user-attachments/assets/b037b119-af98-4956-bd6c-dfe34e3eca69)
 
 I'm going to wipe you, using $20 cash sown into my boxers
 
