@@ -4,11 +4,17 @@
 
  Then when decrypted it doesnt save as Bo Shang (356A3B7D) – Secret.asc.aes256.decrypted it goes back to Bo Shang (356A3B7D) – Secret.asc
 
+ However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
+
+ ---- encryption, the desktop app
+ 
 The UI still needs another prompt, but leave blank to create new account, or enter bo@shang.software as the email, and try to break in! $100 crypto for any penetration that's logical, unlike https://boshang9.wordpress.com/blog/
 
 ![image](https://github.com/user-attachments/assets/297b1917-b1e5-4b4e-b009-81c1c9277a49)
 
-![image](https://github.com/user-attachments/assets/b2ebf353-b874-4bf9-81d8-b1219d32b25e) - 
+![image](https://github.com/user-attachments/assets/b2ebf353-b874-4bf9-81d8-b1219d32b25e) 
+
+
 
 -----
 
@@ -19,9 +25,12 @@ For that, please visit https://erosolar.net/encryption/
 -----
 
 
+
 ![image](https://github.com/user-attachments/assets/1da0b540-d3b8-4e81-81eb-f084f28d0805)
 
- However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
+![image](https://github.com/user-attachments/assets/d3edd244-4b2e-48a0-8b81-5a4106479388)
+
+
 
 ![image](https://github.com/user-attachments/assets/c8b925bd-68ab-4a09-a9bb-5b82eccd1fdc)
 
