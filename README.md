@@ -6,13 +6,9 @@
 
  However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
 
- ---- encryption, the desktop app
+ ---- encryption, by PDFSage
  
-The UI still needs another prompt, but leave blank to create new account, or enter bo@shang.software as the email, and try to break in! $100 crypto for any penetration that's logical, unlike https://boshang9.wordpress.com/blog/
-
-![image](https://github.com/user-attachments/assets/297b1917-b1e5-4b4e-b009-81c1c9277a49)
-
-![image](https://github.com/user-attachments/assets/b2ebf353-b874-4bf9-81d8-b1219d32b25e) 
+![image](https://github.com/user-attachments/assets/e0b8bf32-4aba-4ce8-a2ed-2de63ce0dcec)
 
 
 
