@@ -140,6 +140,24 @@ def save_keyvault(vault):
     keyring.set_password('pgp_app', pref('pgp_keyvault'), enc)
 
 
+def delete_account_data(email):
+    for kt in ('private_key', 'sign_private_key', 'credentials', 'pgp_keyvault',
+               'public_key', 'verify_public_key', 'master_pw_hash'):
+        try:
+            keyring.delete_password('pgp_app', f'{email}_{kt}')
+        except PasswordDeleteError:
+            pass
+    accts = load_accounts()
+    was_default = accts.get(email, {}).get('default')
+    accts.pop(email, None)
+    if was_default and accts:
+        first = next(iter(accts))
+        for v in accts.values():
+            v['default'] = False
+        accts[first]['default'] = True
+    save_accounts(accts)
+
+
 def change_master_password():
     global fernet, master_password
     cur = sd.askstring('Current Master Password', 'Enter current master password:', show='*')
@@ -173,20 +191,7 @@ def delete_account():
         return
     if not messagebox.askyesno('Confirm', 'Delete this account? This cannot be undone.'):
         return
-    for kt in ('private_key', 'sign_private_key', 'credentials', 'pgp_keyvault', 'public_key', 'verify_public_key', 'master_pw_hash'):
-        try:
-            keyring.delete_password('pgp_app', pref(kt))
-        except PasswordDeleteError:
-            pass
-    accts = load_accounts()
-    was_default = accts.get(ACCOUNT_ID, {}).get('default')
-    accts.pop(ACCOUNT_ID, None)
-    if was_default and accts:
-        first = next(iter(accts))
-        for v in accts.values():
-            v['default'] = False
-        accts[first]['default'] = True
-    save_accounts(accts)
+    delete_account_data(ACCOUNT_ID)
     messagebox.showinfo('Deleted', 'Account deleted. Application will close.')
     on_close()
 
@@ -240,6 +245,13 @@ def account_selection_gui(accounts):
     btn_frame = ttk.Frame(win)
     btn_frame.pack(fill='x', pady=5)
 
+    def refresh_tree():
+        for iid in tree.get_children():
+            tree.delete(iid)
+        for email, info in load_accounts().items():
+            display = f"{'★ ' if info.get('default') else ''}{email} ({info.get('name', '')})"
+            tree.insert('', 'end', iid=email, values=(display,))
+
     def proceed():
         sel = tree.selection()
         if not sel:
@@ -255,18 +267,31 @@ def account_selection_gui(accounts):
         sel = tree.selection()
         if not sel:
             return
-        for v in accounts.values():
+        accts = load_accounts()
+        for v in accts.values():
             v['default'] = False
-        accounts[sel[0]]['default'] = True
-        save_accounts(accounts)
-        for iid in tree.get_children():
-            info = accounts[iid]
-            display = f"{'★ ' if info.get('default') else ''}{iid} ({info.get('name', '')})"
-            tree.item(iid, values=(display,))
+        accts[sel[0]]['default'] = True
+        save_accounts(accts)
+        refresh_tree()
+
+    def delete_selected():
+        sel = tree.selection()
+        if not sel:
+            return
+        email = sel[0]
+        confirm = sd.askstring('Confirm Delete', f'Type the email of the account ({email}) to delete:')
+        if confirm != email:
+            messagebox.showerror('Error', 'Email confirmation does not match')
+            return
+        if not messagebox.askyesno('Confirm', f'Delete account {email}? This cannot be undone.'):
+            return
+        delete_account_data(email)
+        refresh_tree()
 
     ttk.Button(btn_frame, text='Proceed', command=proceed).pack(side='left', padx=5)
     ttk.Button(btn_frame, text='Create New', command=create).pack(side='left', padx=5)
     ttk.Button(btn_frame, text='Set Default', command=set_default).pack(side='left', padx=5)
+    ttk.Button(btn_frame, text='Delete', command=delete_selected).pack(side='left', padx=5)
     ttk.Button(btn_frame, text='Cancel', command=win.destroy).pack(side='right', padx=5)
     win.mainloop()
     if result.get('action') == 'create':
@@ -335,7 +360,10 @@ def verify_signature(pub, sm):
 def generate_keypair(name, email, passphrase):
     key = PGPKey.new(PubKeyAlgorithm.RSAEncryptOrSign, 2048)
     uid = PGPUID.new(name, email=email)
-    key.add_uid(uid, usage={KeyFlags.Sign, KeyFlags.EncryptCommunications, KeyFlags.EncryptStorage}, hashes=[HashAlgorithm.SHA256], ciphers=[SymmetricKeyAlgorithm.AES256], compression=[CompressionAlgorithm.ZLIB])
+    key.add_uid(uid, usage={KeyFlags.Sign, KeyFlags.EncryptCommunications, KeyFlags.EncryptStorage},
+                hashes=[HashAlgorithm.SHA256],
+                ciphers=[SymmetricKeyAlgorithm.AES256],
+                compression=[CompressionAlgorithm.ZLIB])
     if passphrase:
         key.protect(passphrase, SymmetricKeyAlgorithm.AES256, HashAlgorithm.SHA256)
     return str(key), str(key.pubkey), key.fingerprint
@@ -414,7 +442,8 @@ def open_vault_window():
         data = load_keyvault().get(fp, {})
         for typ in ('public', 'private'):
             if typ in data:
-                path = filedialog.asksaveasfilename(defaultextension='.asc', filetypes=[('PGP Key', '*.asc')], title=f'Save {typ} key')
+                path = filedialog.asksaveasfilename(defaultextension='.asc', filetypes=[('PGP Key', '*.asc')],
+                                                    title=f'Save {typ} key')
                 if not path:
                     continue
                 with open(path, 'w') as f:
@@ -486,7 +515,8 @@ def verify_action():
     try:
         valid, orig = verify_signature(pub, sm_blob)
     except TypeError:
-        path = filedialog.askopenfilename(title='Select original message file', filetypes=[('Text Files', '*.txt'), ('All Files', '*.*')])
+        path = filedialog.askopenfilename(title='Select original message file',
+                                          filetypes=[('Text Files', '*.txt'), ('All Files', '*.*')])
         if not path:
             return
         with open(path, 'r') as f:
@@ -538,7 +568,8 @@ def export_public_key(kt):
         fp = k.fingerprint
     except Exception:
         fp = ''
-    path = filedialog.asksaveasfilename(defaultextension='.asc', filetypes=[('PGP Public Key', '*.asc'), ('All Files', '*.*')])
+    path = filedialog.asksaveasfilename(defaultextension='.asc',
+                                        filetypes=[('PGP Public Key', '*.asc'), ('All Files', '*.*')])
     if path:
         with open(path, 'w') as f:
             f.write(txt)
@@ -561,7 +592,8 @@ def export_private_key(kt):
         fp = k.fingerprint
     except Exception:
         fp = ''
-    path = filedialog.asksaveasfilename(defaultextension='.asc', filetypes=[('PGP Private Key', '*.asc'), ('All Files', '*.*')])
+    path = filedialog.asksaveasfilename(defaultextension='.asc',
+                                        filetypes=[('PGP Private Key', '*.asc'), ('All Files', '*.*')])
     if path:
         with open(path, 'w') as f:
             f.write(txt)
@@ -575,7 +607,8 @@ def save_encrypted_action():
     if not ct:
         messagebox.showerror('Error', 'No ciphertext')
         return
-    path = filedialog.asksaveasfilename(defaultextension='.pgp', filetypes=[('PGP Files', '*.pgp'), ('All Files', '*.*')])
+    path = filedialog.asksaveasfilename(defaultextension='.pgp',
+                                        filetypes=[('PGP Files', '*.pgp'), ('All Files', '*.*')])
     if path:
         with open(path, 'w') as f:
             f.write(ct)
@@ -587,7 +620,8 @@ def save_decrypted_action():
     if not pt.strip():
         messagebox.showerror('Error', 'No decrypted text')
         return
-    path = filedialog.asksaveasfilename(defaultextension='.txt', filetypes=[('Text Files', '*.txt'), ('All Files', '*.*')])
+    path = filedialog.asksaveasfilename(defaultextension='.txt',
+                                        filetypes=[('Text Files', '*.txt'), ('All Files', '*.*')])
     if path:
         with open(path, 'w') as f:
             f.write(pt)
@@ -651,7 +685,8 @@ def aes_encrypt_file_action():
 
 def aes_decrypt_file_action():
     pw = aes_secret_key if aes_secret_key else master_password
-    path = filedialog.askopenfilename(title='Select encrypted file to decrypt', filetypes=[('Encrypted Files', '*.aes256 *.enc'), ('All Files', '*.*')])
+    path = filedialog.askopenfilename(title='Select encrypted file to decrypt',
+                                      filetypes=[('Encrypted Files', '*.aes256 *.enc'), ('All Files', '*.*')])
     if not path:
         return
     try:
@@ -754,10 +789,18 @@ acct_menu.add_command(label='Change Master Password', command=change_master_pass
 acct_menu.add_command(label='Delete Account', command=delete_account)
 menubar.add_cascade(label='Account', menu=acct_menu)
 keys_menu = tk.Menu(menubar, tearoff=0)
-keys_menu.add_command(label='Save Encryption Public Key', command=lambda: store_key('public_key', public_key_text.get('1.0', tk.END).strip()) or messagebox.showinfo('Saved', 'Public key stored'))
-keys_menu.add_command(label='Save Encryption Private Key', command=lambda: store_key('private_key', private_key_text.get('1.0', tk.END).strip()) or messagebox.showinfo('Saved', 'Private key stored'))
-keys_menu.add_command(label='Save Signing Private Key', command=lambda: store_key('sign_private_key', private_sign_key_text.get('1.0', tk.END).strip()) or messagebox.showinfo('Saved', 'Signing key stored'))
-keys_menu.add_command(label='Save Verify Public Key', command=lambda: store_key('verify_public_key', public_verify_key_text.get('1.0', tk.END).strip()) or messagebox.showinfo('Saved', 'Verify public key stored'))
+keys_menu.add_command(label='Save Encryption Public Key',
+                      command=lambda: store_key('public_key', public_key_text.get('1.0', tk.END).strip()) or
+                                      messagebox.showinfo('Saved', 'Public key stored'))
+keys_menu.add_command(label='Save Encryption Private Key',
+                      command=lambda: store_key('private_key', private_key_text.get('1.0', tk.END).strip()) or
+                                      messagebox.showinfo('Saved', 'Private key stored'))
+keys_menu.add_command(label='Save Signing Private Key',
+                      command=lambda: store_key('sign_private_key', private_sign_key_text.get('1.0', tk.END).strip()) or
+                                      messagebox.showinfo('Saved', 'Signing key stored'))
+keys_menu.add_command(label='Save Verify Public Key',
+                      command=lambda: store_key('verify_public_key', public_verify_key_text.get('1.0', tk.END).strip()) or
+                                      messagebox.showinfo('Saved', 'Verify public key stored'))
 keys_menu.add_separator()
 keys_menu.add_command(label='Generate Keypair', command=generate_key_action)
 keys_menu.add_command(label='Open Key Vault', command=open_vault_window)
@@ -782,8 +825,10 @@ public_key_text.pack(fill='x', padx=5, pady=5)
 stored = get_stored_key('public_key')
 if stored:
     public_key_text.insert('1.0', stored)
-ttk.Button(pub_frame, text='Load Public Key', command=lambda: load_key_file('public_key', public_key_text)).pack(padx=5, pady=5)
-ttk.Button(pub_frame, text='Export Public Key', command=lambda: export_public_key('public_key')).pack(padx=5, pady=5)
+ttk.Button(pub_frame, text='Load Public Key',
+           command=lambda: load_key_file('public_key', public_key_text)).pack(padx=5, pady=5)
+ttk.Button(pub_frame, text='Export Public Key',
+           command=lambda: export_public_key('public_key')).pack(padx=5, pady=5)
 pt_frame = ttk.LabelFrame(encrypt_frame, text='Plaintext')
 pt_frame.pack(fill='both', expand=True, padx=5, pady=5)
 plaintext_text = scrolledtext.ScrolledText(pt_frame, height=10)
@@ -793,7 +838,8 @@ ct_frame = ttk.LabelFrame(encrypt_frame, text='Ciphertext')
 ct_frame.pack(fill='both', expand=True, padx=5, pady=5)
 ciphertext_text = scrolledtext.ScrolledText(ct_frame, height=10)
 ciphertext_text.pack(fill='both', expand=True, padx=5, pady=5)
-ttk.Button(encrypt_frame, text='Copy Encrypted', command=lambda: copy_to_clipboard(ciphertext_text)).pack(padx=5, pady=5)
+ttk.Button(encrypt_frame, text='Copy Encrypted',
+           command=lambda: copy_to_clipboard(ciphertext_text)).pack(padx=5, pady=5)
 ttk.Button(encrypt_frame, text='Save Encrypted', command=save_encrypted_action).pack(padx=5, pady=5)
 priv_frame = ttk.LabelFrame(decrypt_frame, text='Private Key')
 priv_frame.pack(fill='x', padx=5, pady=5)
@@ -802,8 +848,10 @@ private_key_text.pack(fill='x', padx=5, pady=5)
 stored_priv = get_stored_key('private_key')
 if stored_priv:
     private_key_text.insert('1.0', stored_priv)
-ttk.Button(priv_frame, text='Load Private Key', command=lambda: load_key_file('private_key', private_key_text)).pack(padx=5, pady=5)
-ttk.Button(priv_frame, text='Export Private Key', command=lambda: export_private_key('private_key')).pack(padx=5, pady=5)
+ttk.Button(priv_frame, text='Load Private Key',
+           command=lambda: load_key_file('private_key', private_key_text)).pack(padx=5, pady=5)
+ttk.Button(priv_frame, text='Export Private Key',
+           command=lambda: export_private_key('private_key')).pack(padx=5, pady=5)
 pp_frame = ttk.LabelFrame(decrypt_frame, text='Passphrase')
 pp_frame.pack(fill='x', padx=5, pady=5)
 passphrase_entry = ttk.Entry(pp_frame, show='*')
@@ -817,7 +865,8 @@ dec_out_frame = ttk.LabelFrame(decrypt_frame, text='Plaintext')
 dec_out_frame.pack(fill='both', expand=True, padx=5, pady=5)
 decrypted_text = scrolledtext.ScrolledText(dec_out_frame, height=10)
 decrypted_text.pack(fill='both', expand=True, padx=5, pady=5)
-ttk.Button(decrypt_frame, text='Copy Decrypted', command=lambda: copy_to_clipboard(decrypted_text)).pack(padx=5, pady=5)
+ttk.Button(decrypt_frame, text='Copy Decrypted',
+           command=lambda: copy_to_clipboard(decrypted_text)).pack(padx=5, pady=5)
 ttk.Button(decrypt_frame, text='Save Decrypted', command=save_decrypted_action).pack(padx=5, pady=5)
 spriv_frame = ttk.LabelFrame(sign_frame, text='Private Key')
 spriv_frame.pack(fill='x', padx=5, pady=5)
@@ -826,8 +875,10 @@ private_sign_key_text.pack(fill='x', padx=5, pady=5)
 stored_sign = get_stored_key('sign_private_key')
 if stored_sign:
     private_sign_key_text.insert('1.0', stored_sign)
-ttk.Button(spriv_frame, text='Load Private Key', command=lambda: load_key_file('sign_private_key', private_sign_key_text)).pack(padx=5, pady=5)
-ttk.Button(spriv_frame, text='Export Private Key', command=lambda: export_private_key('sign_private_key')).pack(padx=5, pady=5)
+ttk.Button(spriv_frame, text='Load Private Key',
+           command=lambda: load_key_file('sign_private_key', private_sign_key_text)).pack(padx=5, pady=5)
+ttk.Button(spriv_frame, text='Export Private Key',
+           command=lambda: export_private_key('sign_private_key')).pack(padx=5, pady=5)
 spp_frame = ttk.LabelFrame(sign_frame, text='Passphrase')
 spp_frame.pack(fill='x', padx=5, pady=5)
 passphrase_sign_entry = ttk.Entry(spp_frame, show='*')
@@ -842,7 +893,8 @@ sout_frame = ttk.LabelFrame(sign_frame, text='Signed Message')
 sout_frame.pack(fill='both', expand=True, padx=5, pady=5)
 signature_text = scrolledtext.ScrolledText(sout_frame, height=10)
 signature_text.pack(fill='both', expand=True, padx=5, pady=5)
-ttk.Button(sign_frame, text='Copy Signature', command=lambda: copy_to_clipboard(signature_text)).pack(padx=5, pady=5)
+ttk.Button(sign_frame, text='Copy Signature',
+           command=lambda: copy_to_clipboard(signature_text)).pack(padx=5, pady=5)
 vpub_frame = ttk.LabelFrame(verify_frame, text='Public Key')
 vpub_frame.pack(fill='x', padx=5, pady=5)
 public_verify_key_text = scrolledtext.ScrolledText(vpub_frame, height=10)
@@ -850,8 +902,10 @@ public_verify_key_text.pack(fill='x', padx=5, pady=5)
 stored_ver = get_stored_key('verify_public_key')
 if stored_ver:
     public_verify_key_text.insert('1.0', stored_ver)
-ttk.Button(vpub_frame, text='Load Public Key', command=lambda: load_key_file('verify_public_key', public_verify_key_text)).pack(padx=5, pady=5)
-ttk.Button(vpub_frame, text='Export Public Key', command=lambda: export_public_key('verify_public_key')).pack(padx=5, pady=5)
+ttk.Button(vpub_frame, text='Load Public Key',
+           command=lambda: load_key_file('verify_public_key', public_verify_key_text)).pack(padx=5, pady=5)
+ttk.Button(vpub_frame, text='Export Public Key',
+           command=lambda: export_public_key('verify_public_key')).pack(padx=5, pady=5)
 vin_frame = ttk.LabelFrame(verify_frame, text='Signed Message')
 vin_frame.pack(fill='both', expand=True, padx=5, pady=5)
 verify_input_text = scrolledtext.ScrolledText(vin_frame, height=10)
@@ -879,7 +933,8 @@ aes_ciphertext_text.pack(fill='both', expand=True, padx=5, pady=5)
 ttk.Button(aes_frame, text='Decrypt', command=aes_decrypt_action).pack(side='left', padx=5, pady=5)
 ttk.Button(aes_frame, text='Encrypt File', command=aes_encrypt_file_action).pack(side='left', padx=5, pady=5)
 ttk.Button(aes_frame, text='Decrypt File', command=aes_decrypt_file_action).pack(side='left', padx=5, pady=5)
-ttk.Button(aes_frame, text='Copy Ciphertext', command=lambda: copy_to_clipboard(aes_ciphertext_text)).pack(side='left', padx=5, pady=5)
+ttk.Button(aes_frame, text='Copy Ciphertext',
+           command=lambda: copy_to_clipboard(aes_ciphertext_text)).pack(side='left', padx=5, pady=5)
 ttk.Button(aes_frame, text='Save Ciphertext', command=save_aes_ciphertext_action).pack(side='left', padx=5, pady=5)
 dec_frame = ttk.LabelFrame(aes_frame, text='Decrypted')
 dec_frame.pack(fill='both', expand=True, padx=5, pady=5)
