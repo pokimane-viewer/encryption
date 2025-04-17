@@ -1,4 +1,10 @@
 # encryption, by PDFSage 
+
+python3.12 -m PyInstaller  encryption_by_pdfsage.py 
+
+ --- 
+ 
+ irrelevant comments to Adam, from Bo
  
  PGP secret keys are already unlocked with AES256, but I encrypted my GPG secret key with the default master pw in my password vault application, so it's saved as Bo Shang (356A3B7D) – Secret.asc.aes256
 
