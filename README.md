@@ -33,3 +33,8 @@ Valid: True
 Hi Adam nice to meet you!
 
 ![image](https://github.com/user-attachments/assets/bf5f9d4a-124b-4276-9398-ec4390aa7c51)
+
+Your PGP public key fingerprint is: hz@mit.edu (PGP Public Key, fingerprint 3FF5 7BE5 E5DF 680E 1EC2 4ADA B63A 0A59 F5C8 2493)
+
+![image](https://github.com/user-attachments/assets/eb21f014-bcfd-44c0-90b5-ed46ecbb3834)
+
