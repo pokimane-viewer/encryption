@@ -1,3 +1,20 @@
+import sys, types
+try:
+    import imghdr
+except ModuleNotFoundError:
+    imghdr = types.ModuleType('imghdr')
+    def what(fp, h=None):
+        if h is None:
+            with open(fp, 'rb') as f:
+                h = f.read(32)
+        sigs = {b'\x89PNG\r\n\x1a\n': 'png', b'\xff\xd8\xff': 'jpeg', b'GIF87a': 'gif', b'GIF89a': 'gif'}
+        for sig, fmt in sigs.items():
+            if h.startswith(sig):
+                return fmt
+        return None
+    imghdr.what = what
+    sys.modules['imghdr'] = imghdr
+
 import os
 import base64
 import json
@@ -90,8 +107,7 @@ def verify_master_password(pw):
 
 def store_key(kt, txt):
     if kt in ('private_key', 'sign_private_key', 'credentials', 'pgp_keyvault'):
-        enc = fernet.encrypt(txt.encode()).decode()
-        keyring.set_password('pgp_app', pref(kt), enc)
+        keyring.set_password('pgp_app', pref(kt), fernet.encrypt(txt.encode()).decode())
     else:
         keyring.set_password('pgp_app', pref(kt), txt)
 
@@ -120,8 +136,7 @@ def load_credentials():
 
 
 def save_credentials(creds):
-    enc = fernet.encrypt(json.dumps(creds).encode()).decode()
-    keyring.set_password('pgp_app', pref('credentials'), enc)
+    keyring.set_password('pgp_app', pref('credentials'), fernet.encrypt(json.dumps(creds).encode()).decode())
 
 
 def load_keyvault():
@@ -136,8 +151,7 @@ def load_keyvault():
 
 
 def save_keyvault(vault):
-    enc = fernet.encrypt(json.dumps(vault).encode()).decode()
-    keyring.set_password('pgp_app', pref('pgp_keyvault'), enc)
+    keyring.set_password('pgp_app', pref('pgp_keyvault'), fernet.encrypt(json.dumps(vault).encode()).decode())
 
 
 def delete_account_data(email):
@@ -234,8 +248,7 @@ def account_selection_gui(accounts):
     tree = ttk.Treeview(win, columns=('acc',), show='headings', height=10)
     tree.heading('acc', text='Account')
     for email, info in accounts.items():
-        display = f"{'★ ' if info.get('default') else ''}{email} ({info.get('name', '')})"
-        tree.insert('', 'end', iid=email, values=(display,))
+        tree.insert('', 'end', iid=email, values=(f"{'★ ' if info.get('default') else ''}{email} ({info.get('name', '')})",))
     for email, info in accounts.items():
         if info.get('default'):
             tree.selection_set(email)
@@ -249,15 +262,13 @@ def account_selection_gui(accounts):
         for iid in tree.get_children():
             tree.delete(iid)
         for email, info in load_accounts().items():
-            display = f"{'★ ' if info.get('default') else ''}{email} ({info.get('name', '')})"
-            tree.insert('', 'end', iid=email, values=(display,))
+            tree.insert('', 'end', iid=email, values=(f"{'★ ' if info.get('default') else ''}{email} ({info.get('name', '')})",))
 
     def proceed():
         sel = tree.selection()
-        if not sel:
-            return
-        result['choice'] = sel[0]
-        win.destroy()
+        if sel:
+            result['choice'] = sel[0]
+            win.destroy()
 
     def create():
         result['action'] = 'create'
@@ -327,13 +338,11 @@ def login_flow():
 
 
 def load_public_key_from_text(txt):
-    key, _ = PGPKey.from_blob(txt)
-    return key
+    return PGPKey.from_blob(txt)[0]
 
 
 def load_private_key_from_text(txt):
-    key, _ = PGPKey.from_blob(txt)
-    return key
+    return PGPKey.from_blob(txt)[0]
 
 
 def encrypt_message(pub, msg):
@@ -486,8 +495,7 @@ def sign_action():
     key = load_private_key_from_text(private_sign_key_text.get('1.0', tk.END).strip())
     msg = sign_input_text.get('1.0', tk.END).rstrip('\n')
     signature = sign_message_detached(key, msg, passphrase_sign_entry.get())
-    header = '-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n'
-    signed = header + msg + '\n' + str(signature)
+    signed = '-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\n' + msg + '\n' + str(signature)
     signature_text.delete('1.0', tk.END)
     signature_text.insert(tk.END, signed)
 
@@ -564,8 +572,7 @@ def export_public_key(kt):
         messagebox.showerror('Error', 'No key stored')
         return
     try:
-        k, _ = PGPKey.from_blob(txt)
-        fp = k.fingerprint
+        fp = PGPKey.from_blob(txt)[0].fingerprint
     except Exception:
         fp = ''
     path = filedialog.asksaveasfilename(defaultextension='.asc',
@@ -588,8 +595,7 @@ def export_private_key(kt):
         messagebox.showerror('Error', 'No key stored')
         return
     try:
-        k, _ = PGPKey.from_blob(txt)
-        fp = k.fingerprint
+        fp = PGPKey.from_blob(txt)[0].fingerprint
     except Exception:
         fp = ''
     path = filedialog.asksaveasfilename(defaultextension='.asc',
@@ -955,16 +961,6 @@ ttk.Button(button_frame, text='Delete', command=delete_cred).pack(side='left')
 ttk.Button(button_frame, text='Show', command=show_password).pack(side='left')
 ttk.Button(button_frame, text='Copy Password', command=lambda: copy_selected('password')).pack(side='left')
 ttk.Button(button_frame, text='Copy Username', command=lambda: copy_selected('username')).pack(side='left')
-
-
-def refresh_credentials_view():
-    for i in tree.get_children():
-        tree.delete(i)
-    for site, info in load_credentials().items():
-        tree.insert('', 'end', iid=site, values=(site, info['username'], '******'))
-
-
-refresh_credentials_view()
 hash_frame = ttk.Frame(nb)
 nb.add(hash_frame, text='Check Hash')
 source_var = tk.StringVar(value='text')
@@ -1034,6 +1030,16 @@ verify_entry_hash.pack(side='left', fill='x', expand=True, padx=5, pady=5)
 verify_alg_var = tk.StringVar(value='MD5')
 ttk.OptionMenu(verify_frame_hash, verify_alg_var, 'MD5', 'MD5', 'SHA256').pack(side='left', padx=5, pady=5)
 ttk.Button(hash_frame, text='Verify Hash', command=verify_hash).pack(padx=5, pady=5)
+
+
+def refresh_credentials_view():
+    for i in tree.get_children():
+        tree.delete(i)
+    for site, info in load_credentials().items():
+        tree.insert('', 'end', iid=site, values=(site, info['username'], '******'))
+
+
+refresh_credentials_view()
 
 
 def on_close():
