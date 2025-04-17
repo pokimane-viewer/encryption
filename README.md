@@ -30,7 +30,9 @@ For that, please visit https://erosolar.net/encryption/
 
 ![image](https://github.com/user-attachments/assets/d3edd244-4b2e-48a0-8b81-5a4106479388)
 
+----
 
+Write to Bo at https://erosolar.net/encryption/ or with the Desktop app!
 
 ![image](https://github.com/user-attachments/assets/c8b925bd-68ab-4a09-a9bb-5b82eccd1fdc)
 
