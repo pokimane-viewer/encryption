@@ -4,13 +4,15 @@ python3.12 -m PyInstaller  encryption_by_pdfsage.py
 
  --- 
  
- irrelevant comments to Adam, from Bo
+ irrelevant comments to Adam, from Bo:
  
- PGP secret keys are already unlocked with AES256, but I encrypted my GPG secret key with the default master pw in my password vault application, so it's saved as Bo Shang (356A3B7D) – Secret.asc.aes256
+ PGP secret keys are already unlocked with AES256 (passphrase), but I encrypted my GPG secret key with the default master pw in my password vault application, so it's saved as Bo Shang (356A3B7D) – Secret.asc.aes256
 
  Then when decrypted it doesnt save as Bo Shang (356A3B7D) – Secret.asc.aes256.decrypted it goes back to Bo Shang (356A3B7D) – Secret.asc
 
  However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
+
+ Guess what the passphrase for the fake Adam Hartz pgp keypair is?
 
  ---- 
  
