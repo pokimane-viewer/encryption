@@ -9,6 +9,8 @@
  ---- 
  
  encryption (desktop version, linux, macos, or windows), by PDFSage
+
+ GUI no headless OS supported 
  
 ![image](https://github.com/user-attachments/assets/e0b8bf32-4aba-4ce8-a2ed-2de63ce0dcec)
 
