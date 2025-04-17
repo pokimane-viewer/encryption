@@ -38,6 +38,18 @@ Write to Bo at https://erosolar.net/encryption/ or with the Desktop app!
 
 ![image](https://github.com/user-attachments/assets/34cf1307-162c-4cea-9a6a-cc6c846a13b1)
 
+
+----
+
+Bo checks his email at bo@shang.software unlike the Middlesex DA!
+
+![image](https://github.com/user-attachments/assets/5a2b2db8-146e-4399-880d-6ab8870aa6cc)
+
+noreply@amediocrefruit.com
+
+<img width="1291" alt="image" src="https://github.com/user-attachments/assets/a46bf3c9-5485-4ced-bd80-d9a1bd28c5f8" />
+
+
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA256
 
