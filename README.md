@@ -10,7 +10,9 @@
  
 ![image](https://github.com/user-attachments/assets/e0b8bf32-4aba-4ce8-a2ed-2de63ce0dcec)
 
+By using PDFSage software, you agree to to bound by the PDFSage Software Agreement
 
+Once you jailbreak a mediocre fruit you are no longer bound by their agreement enforced upon you, but I cannot win in court if I instill the same fruit restrictions onto GNU something open source license or something... Nor can they
 
 -----
 
