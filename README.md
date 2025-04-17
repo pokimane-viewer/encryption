@@ -48,5 +48,8 @@ Your PGP public key fingerprint is: hz@mit.edu (PGP Public Key, fingerprint 3FF5
 
 [searchresults.page.pdf](https://github.com/user-attachments/files/19791236/searchresults.page.pdf)[searchresults.page-2.pdf](https://github.com/user-attachments/files/19791240/searchresults.page-2.pdf)
 
+I'm going to wipe you, using $20 cash sown into my boxers
+
+![image](https://github.com/user-attachments/assets/bf520455-bd85-4d48-8281-b1d511756cc5)
 
 
