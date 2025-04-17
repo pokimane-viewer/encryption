@@ -1,5 +1,8 @@
 # encryption, by PDFSage 
  
+ PGP secret keys are already unlocked with AES256, but I encrypted my GPG secret key with the default master pw in my password vault application, so it's saved as Bo Shang (356A3B7D) – Secret.asc.aes256
+
+ Then when decrypted it doesnt save as Bo Shang (356A3B7D) – Secret.asc.aes256.decrypted it goes back to Bo Shang (356A3B7D) – Secret.asc
 
 ![image](https://github.com/user-attachments/assets/c8b925bd-68ab-4a09-a9bb-5b82eccd1fdc)
 
