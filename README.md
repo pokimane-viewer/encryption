@@ -18,6 +18,9 @@ For that, please visit https://erosolar.net/encryption/
 
 -----
 
+
+![image](https://github.com/user-attachments/assets/1da0b540-d3b8-4e81-81eb-f084f28d0805)
+
  However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
 
 ![image](https://github.com/user-attachments/assets/c8b925bd-68ab-4a09-a9bb-5b82eccd1fdc)
