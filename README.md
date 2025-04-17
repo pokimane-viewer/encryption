@@ -28,15 +28,9 @@ For that, please visit https://erosolar.net/encryption/
 
 ![image](https://github.com/user-attachments/assets/1da0b540-d3b8-4e81-81eb-f084f28d0805)
 
-![image](https://github.com/user-attachments/assets/d3edd244-4b2e-48a0-8b81-5a4106479388)
-
-----
-
 Write to Bo at https://erosolar.net/encryption/ or with the Desktop app!
 
-![image](https://github.com/user-attachments/assets/c8b925bd-68ab-4a09-a9bb-5b82eccd1fdc)
-
-![image](https://github.com/user-attachments/assets/34cf1307-162c-4cea-9a6a-cc6c846a13b1)
+![image](https://github.com/user-attachments/assets/d3edd244-4b2e-48a0-8b81-5a4106479388)
 
 
 ----
@@ -48,6 +42,15 @@ Bo checks his email at bo@shang.software unlike the Middlesex DA!
 noreply@amediocrefruit.com
 
 <img width="1291" alt="image" src="https://github.com/user-attachments/assets/a46bf3c9-5485-4ced-bd80-d9a1bd28c5f8" />
+
+
+----
+
+Bo writes to Adam!
+
+![image](https://github.com/user-attachments/assets/c8b925bd-68ab-4a09-a9bb-5b82eccd1fdc)
+
+![image](https://github.com/user-attachments/assets/34cf1307-162c-4cea-9a6a-cc6c846a13b1)
 
 
 -----BEGIN PGP SIGNED MESSAGE-----
