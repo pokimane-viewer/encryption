@@ -10,6 +10,14 @@ The UI still needs another prompt, but leave blank to create new account, or ent
 
 ![image](https://github.com/user-attachments/assets/b2ebf353-b874-4bf9-81d8-b1219d32b25e) - 
 
+-----
+
+So nobody likes ssh-keygen because it's Terminal only shit; most people would prefer a file they could drag themselves. Then store it and label it and encrypt the secret key with AES256 accordingly then store it etc.
+
+For that, please visit https://erosolar.net/encryption/
+
+-----
+
  However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
 
 ![image](https://github.com/user-attachments/assets/c8b925bd-68ab-4a09-a9bb-5b82eccd1fdc)
