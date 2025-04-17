@@ -4,6 +4,10 @@
 
  Then when decrypted it doesnt save as Bo Shang (356A3B7D) – Secret.asc.aes256.decrypted it goes back to Bo Shang (356A3B7D) – Secret.asc
 
+The UI still needs another prompt, but leave blank to create new account, or enter bo@shang.software as the email, and try to break in! $100 crypto for any penetration that's logical, unlike https://boshang9.wordpress.com/blog/
+
+![image](https://github.com/user-attachments/assets/297b1917-b1e5-4b4e-b009-81c1c9277a49)
+
 ![image](https://github.com/user-attachments/assets/b2ebf353-b874-4bf9-81d8-b1219d32b25e) - 
 
  However only a SHA256 hash of my master PW is stored persistently to disk; why is that Adam?
