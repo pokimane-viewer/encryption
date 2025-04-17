@@ -42,4 +42,7 @@ Your PGP public key fingerprint is: hz@mit.edu (PGP Public Key, fingerprint 3FF5
 
 ![image](https://github.com/user-attachments/assets/4ea3e57e-4051-426f-9e6e-f212c8b5b155)
 
+[searchresults.page.pdf](https://github.com/user-attachments/files/19791236/searchresults.page.pdf)[searchresults.page-2.pdf](https://github.com/user-attachments/files/19791240/searchresults.page-2.pdf)
+
+
 
